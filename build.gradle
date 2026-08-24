@@ -1,0 +1,64 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'br.com.jhonatan'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	// Spring Boot 4.x requires Java 17+; Java 21 (LTS) is the recommended baseline.
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// --- Spring Web (Spring Boot 4 renamed spring-boot-starter-web -> spring-boot-starter-webmvc) ---
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+	// --- Persistence (MySQL) ---
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// In-memory H2: just to run locally before Docker/MySQL is set up.
+	// Remove it once compose.yaml (MySQL) is actually active.
+	runtimeOnly 'com.h2database:h2'
+
+	// --- Spring for Apache Kafka ---
+	implementation 'org.springframework.boot:spring-boot-starter-kafka'
+
+	// --- Swagger / OpenAPI (Springdoc) ---
+	// v3.x is the stable springdoc-openapi line compatible with Spring Boot 4.x.
+	// Automatically exposes /v3/api-docs and the UI at /swagger-ui.html, no extra config needed.
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
+
+	// --- Lombok ---
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
+	// --- Docker Compose support (dev-time only, never ships to prod) ---
+	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+
+	// --- Tests ---
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-kafka-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

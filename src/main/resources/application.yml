@@ -1,0 +1,53 @@
+server:
+  # Different default port from provider (8080) so both APIs can run at the same time locally.
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: consumer
+
+  # --- Datasource: MySQL, served by compose.yaml via Spring Boot's Docker Compose
+  # service connection (Spring Boot discovers host/port/credentials automatically). ---
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/consumer_db}
+    username: ${SPRING_DATASOURCE_USERNAME:consumer_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:consumer_pass}
+
+  # --- If you ever need to run without Docker again, comment out the MySQL block above
+  # and uncomment this H2 in-memory block instead: ---
+  # datasource:
+  #   url: jdbc:h2:mem:consumer;DB_CLOSE_DELAY=-1
+  #   username: sa
+  #   password: ""
+  #   driver-class-name: org.h2.Driver
+
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      # "update" is convenient in dev; switch to "validate"/"none" in production
+      # and use a migration tool (Flyway/Liquibase) for the schema.
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  kafka:
+    # Spring Boot's Docker Compose Support doesn't create the Kafka connection
+    # automatically yet, so bootstrap-servers needs to match compose.yaml.
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9093}
+    consumer:
+      group-id: ${spring.application.name}-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Base URL of the provider API this service consumes.
+# No HTTP client wired up yet on purpose (kept out of the skeleton) - add a
+# WebClient/RestClient bean in config/ pointing at this URL when you implement it.
+provider:
+  api:
+    base-url: ${PROVIDER_API_BASE_URL:http://localhost:8080}
