@@ -13,5 +13,8 @@ import lombok.Setter;
 @Builder
 public class StatusResponse {
 
+    private String subscription;
+    private String partner;
     private String status;
+    private String message;
 }

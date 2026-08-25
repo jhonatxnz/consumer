@@ -13,12 +13,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SubscriptionDetail {
+public class SubscriptionDetails {
 
     private String subscription;
-    private LocalDateTime createdAt;
-    private String status;
-    private String partner;
     private String email;
     private String phone;
+    private String partner;
+    private String status;
+    private LocalDateTime createdAt;
 }
