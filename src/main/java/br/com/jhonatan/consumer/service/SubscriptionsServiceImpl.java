@@ -1,5 +1,8 @@
 package br.com.jhonatan.consumer.service;
 
+import br.com.jhonatan.consumer.client.ProviderSubscriptionsClient;
+import br.com.jhonatan.consumer.client.dto.ProviderUpdateUserRequest;
+import br.com.jhonatan.consumer.client.dto.ProviderUserRequest;
 import br.com.jhonatan.consumer.dto.StatusResponse;
 import br.com.jhonatan.consumer.dto.ContactRequest;
 import br.com.jhonatan.consumer.dto.SubscriptionDetails;
@@ -27,8 +30,11 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     private final SubscriptionsRepository subscriptionsRepository;
     private final UserSubscriptionsRepository userSubscriptionsRepository;
 
+    private final ProviderSubscriptionsClient providerSubscriptionsClient;
+
     @Override
     public List<SubscriptionDetails> list(String document) {
+
         Users user = usersRepository.findByDocument(document).orElseThrow(UserNotFoundException::new);
 
         List<UserSubscriptions> userSubscriptions = userSubscriptionsRepository.findByUserId(user.getId());
@@ -79,6 +85,9 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
             existingSubscription.setEmail(user.getEmail());
             existingSubscription.setPhone(user.getPhone());
 
+            providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
+
+
             userSubscriptionsRepository.save(existingSubscription);
 
             log.info("{} subscription successfully reactivated for user {}", subscriptionCode, document);
@@ -86,11 +95,20 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
             return StatusResponse.builder()
                     .subscription(subscriptionCode)
                     .partner(subscription.getPartner())
-                    .message("Reactivated successfully")
+                    .message("Subscription successfully reactivated ")
                     .build();
         }
         else {
             log.info("Activating {} subscription for user {}", subscriptionCode, document);
+
+            ProviderUserRequest providerUserRequest = ProviderUserRequest.builder()
+                    .name(user.getName())
+                    .document(document)
+                    .email(request.getEmail())
+                    .phone(request.getPhone())
+                    .build();
+
+            providerSubscriptionsClient.createUser(providerUserRequest);
 
             UserSubscriptions userSubscriptionsActive = UserSubscriptions.builder()
                     .subscriptionId(subscription.getId())
@@ -101,6 +119,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                     .email(request.getEmail())
                     .phone(request.getPhone())
                     .build();
+
+            providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
 
             userSubscriptionsRepository.save(userSubscriptionsActive);
 
@@ -138,6 +158,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         subscriptionToCancel.setStatus(SubscriptionStatus.INACTIVE.value());
         subscriptionToCancel.setCanceledAt(java.time.LocalDateTime.now());
         subscriptionToCancel.setUpdatedAt(java.time.LocalDateTime.now());
+
+        providerSubscriptionsClient.cancelSubscription(document, subscriptionCode);
 
         userSubscriptionsRepository.save(subscriptionToCancel);
 
@@ -235,16 +257,25 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                 .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
                 .toList();
 
+        ProviderUpdateUserRequest providerUpdateUserRequest = ProviderUpdateUserRequest.builder()
+                .name(user.getName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .build();
+
         for (UserSubscriptions subscriptions : userSubscriptions) {
             subscriptions.setEmail(request.getEmail());
             subscriptions.setPhone(request.getPhone());
+
+            providerSubscriptionsClient.updateUser(document, providerUpdateUserRequest);
+
             userSubscriptionsRepository.save(subscriptions);
         }
 
         return StatusResponse.builder()
                 .subscription(subscriptionCode)
                 .partner(subscription.getPartner())
-                .message("User contacts successfully updated")
+                .message("User contact successfully updated")
                 .build();
 
     }

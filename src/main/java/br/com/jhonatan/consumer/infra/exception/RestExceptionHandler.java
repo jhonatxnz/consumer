@@ -1,5 +1,6 @@
 package br.com.jhonatan.consumer.infra.exception;
 
+import br.com.jhonatan.consumer.client.exceptions.*;
 import br.com.jhonatan.consumer.exception.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -93,6 +94,63 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
                 )
         );
     }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerIntegrationException(PartnerIntegrationException e) {
+        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.BAD_REQUEST
+                )
+        );
+    }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerUserNotFoundException(PartnerUserNotFoundException e) {
+        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.BAD_REQUEST
+                )
+        );
+    }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerUserAlreadyHasSubscriptionException(PartnerUserAlreadyHasSubscriptionException e) {
+        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.BAD_REQUEST
+                )
+        );
+    }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerUserAlreadyExistsException(PartnerUserAlreadyExistsException e) {
+        return  ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.CONFLICT
+                )
+        );
+    }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerInvalidDataException(PartnerInvalidDataException e) {
+        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.BAD_REQUEST
+                )
+        );
+    }
+
+
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
