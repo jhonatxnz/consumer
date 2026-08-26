@@ -18,8 +18,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 
 @Log4j2
 @Service
@@ -45,11 +46,11 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
             return SubscriptionDetails.builder()
                     .subscription(subscriptionDetails.getName())
-                    .email(userSubscriptions.getFirst().getEmail())
-                    .phone(userSubscriptions.getFirst().getPhone())
+                    .email(subscription.getEmail())
+                    .phone(subscription.getPhone())
                     .partner(subscriptionDetails.getPartner())
-                    .status(userSubscriptions.getFirst().getStatus())
-                    .createdAt(userSubscriptions.getFirst().getCreatedAt())
+                    .status(subscription.getStatus())
+                    .createdAt(subscription.getCreatedAt())
                     .build();
             }
         ).toList();
@@ -66,29 +67,27 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         Subscriptions subscription = subscriptionsRepository.findByCode(subscriptionCode)
                 .orElseThrow(SubscriptionNotFoundException::new);
 
-        List<UserSubscriptions> userSubscriptions = userSubscriptionsRepository.findByUserId(user.getId())
-                .stream()
-                .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
-                .toList();
+        Optional<UserSubscriptions> existingSubscription = userSubscriptionsRepository
+                .findByUserIdAndSubscriptionId(user.getId(), subscription.getId());
 
-        if (!userSubscriptions.isEmpty() && Objects.equals(userSubscriptions.getFirst().getStatus(), SubscriptionStatus.ACTIVE.value())) {
+        if (existingSubscription.isPresent() && existingSubscription.get().getStatus().equals(SubscriptionStatus.ACTIVE.value())) {
             log.info("User already has subscription");
             throw new UserAlreadyHasSubscription();
-        } else if (!userSubscriptions.isEmpty() && Objects.equals(userSubscriptions.getFirst().getStatus(), SubscriptionStatus.INACTIVE.value())) {
+        } else if (existingSubscription.isPresent() && existingSubscription.get().getStatus().equals(SubscriptionStatus.INACTIVE.value())) {
             log.info("Reactivating {} subscription for user {}", subscriptionCode, document);
 
-            UserSubscriptions existingSubscription = userSubscriptions.getFirst();
+            UserSubscriptions subscriptionToReactivate = existingSubscription.get();
 
-            existingSubscription.setStatus(SubscriptionStatus.ACTIVE.value());
-            existingSubscription.setUpdatedAt(java.time.LocalDateTime.now());
-            existingSubscription.setCanceledAt(null);
-            existingSubscription.setEmail(user.getEmail());
-            existingSubscription.setPhone(user.getPhone());
+            subscriptionToReactivate.setStatus(SubscriptionStatus.ACTIVE.value());
+            subscriptionToReactivate.setUpdatedAt(LocalDateTime.now());
+            subscriptionToReactivate.setCanceledAt(null);
+            subscriptionToReactivate.setEmail(request.getEmail());
+            subscriptionToReactivate.setPhone(request.getPhone());
 
             providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
+            //rescue outliers -> outlierException from provider
 
-
-            userSubscriptionsRepository.save(existingSubscription);
+            userSubscriptionsRepository.save(subscriptionToReactivate);
 
             log.info("{} subscription successfully reactivated for user {}", subscriptionCode, document);
 
@@ -109,12 +108,13 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                     .build();
 
             providerSubscriptionsClient.createUser(providerUserRequest);
+            //rescue outliers -> outlierException from provider
 
             UserSubscriptions userSubscriptionsActive = UserSubscriptions.builder()
                     .subscriptionId(subscription.getId())
                     .userId(user.getId())
-                    .createdAt(java.time.LocalDateTime.now())
-                    .updatedAt(java.time.LocalDateTime.now())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
                     .status(SubscriptionStatus.ACTIVE.value())
                     .email(request.getEmail())
                     .phone(request.getPhone())
@@ -144,10 +144,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         Subscriptions subscription = subscriptionsRepository.findByCode(subscriptionCode)
                 .orElseThrow(SubscriptionNotFoundException::new);
 
-        UserSubscriptions subscriptionToCancel = userSubscriptionsRepository.findByUserId(user.getId())
-                .stream()
-                .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
-                .findFirst()
+        UserSubscriptions subscriptionToCancel = userSubscriptionsRepository
+                .findByUserIdAndSubscriptionId(user.getId(), subscription.getId())
                 .orElseThrow(() -> new SubscriptionNotFoundException("Subscription not found for the customer"));
 
         if (subscriptionToCancel.getStatus().equals(SubscriptionStatus.INACTIVE.value())) {
@@ -156,8 +154,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         }
 
         subscriptionToCancel.setStatus(SubscriptionStatus.INACTIVE.value());
-        subscriptionToCancel.setCanceledAt(java.time.LocalDateTime.now());
-        subscriptionToCancel.setUpdatedAt(java.time.LocalDateTime.now());
+        subscriptionToCancel.setCanceledAt(LocalDateTime.now());
+        subscriptionToCancel.setUpdatedAt(LocalDateTime.now());
 
         providerSubscriptionsClient.cancelSubscription(document, subscriptionCode);
 
@@ -182,10 +180,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         Subscriptions subscription = subscriptionsRepository.findByCode(subscriptionCode)
                 .orElseThrow(SubscriptionNotFoundException::new);
 
-        UserSubscriptions subscriptionToBlock = userSubscriptionsRepository.findByUserId(user.getId())
-                .stream()
-                .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
-                .findFirst()
+        UserSubscriptions subscriptionToBlock = userSubscriptionsRepository
+                .findByUserIdAndSubscriptionId(user.getId(), subscription.getId())
                 .orElseThrow(() -> new SubscriptionNotFoundException("Subscription not found for the customer"));
 
         if (subscriptionToBlock.getStatus().equals(SubscriptionStatus.BLOCKED.value())) {
@@ -194,7 +190,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         }
 
         subscriptionToBlock.setStatus(SubscriptionStatus.BLOCKED.value());
-        subscriptionToBlock.setUpdatedAt(java.time.LocalDateTime.now());
+        subscriptionToBlock.setUpdatedAt(LocalDateTime.now());
 
         userSubscriptionsRepository.save(subscriptionToBlock);
 
@@ -217,21 +213,19 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         Subscriptions subscription = subscriptionsRepository.findByCode(subscriptionCode)
                 .orElseThrow(SubscriptionNotFoundException::new);
 
-        UserSubscriptions subscriptionToBlock = userSubscriptionsRepository.findByUserId(user.getId())
-                .stream()
-                .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
-                .findFirst()
+        UserSubscriptions subscriptionToUnblock = userSubscriptionsRepository
+                .findByUserIdAndSubscriptionId(user.getId(), subscription.getId())
                 .orElseThrow(() -> new SubscriptionNotFoundException("Subscription not found for the customer"));
 
-        if (subscriptionToBlock.getStatus().equals(SubscriptionStatus.ACTIVE.value())) {
+        if (subscriptionToUnblock.getStatus().equals(SubscriptionStatus.ACTIVE.value())) {
             log.info("Subscription already unblocked for the customer");
             throw new SubscriptionAlreadyUnblocked();
         }
 
-        subscriptionToBlock.setStatus(SubscriptionStatus.ACTIVE.value());
-        subscriptionToBlock.setUpdatedAt(java.time.LocalDateTime.now());
+        subscriptionToUnblock.setStatus(SubscriptionStatus.ACTIVE.value());
+        subscriptionToUnblock.setUpdatedAt(LocalDateTime.now());
 
-        userSubscriptionsRepository.save(subscriptionToBlock);
+        userSubscriptionsRepository.save(subscriptionToUnblock);
 
         log.info("Subscription successfully unblocked for the customer {}", document);
 
@@ -252,10 +246,9 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         Subscriptions subscription = subscriptionsRepository.findByCode(subscriptionCode)
                 .orElseThrow(SubscriptionNotFoundException::new);
 
-        List<UserSubscriptions> userSubscriptions = userSubscriptionsRepository.findByUserId(user.getId())
-                .stream()
-                .filter(userSubscription -> userSubscription.getSubscriptionId().equals(subscription.getId()))
-                .toList();
+        UserSubscriptions userSubscription = userSubscriptionsRepository
+                .findByUserIdAndSubscriptionId(user.getId(), subscription.getId())
+                .orElseThrow(() -> new SubscriptionNotFoundException("Subscription not found for the customer"));
 
         ProviderUpdateUserRequest providerUpdateUserRequest = ProviderUpdateUserRequest.builder()
                 .name(user.getName())
@@ -263,14 +256,12 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                 .phone(request.getPhone())
                 .build();
 
-        for (UserSubscriptions subscriptions : userSubscriptions) {
-            subscriptions.setEmail(request.getEmail());
-            subscriptions.setPhone(request.getPhone());
+        providerSubscriptionsClient.updateUser(document, providerUpdateUserRequest);
 
-            providerSubscriptionsClient.updateUser(document, providerUpdateUserRequest);
+        userSubscription.setEmail(request.getEmail());
+        userSubscription.setPhone(request.getPhone());
 
-            userSubscriptionsRepository.save(subscriptions);
-        }
+        userSubscriptionsRepository.save(userSubscription);
 
         return StatusResponse.builder()
                 .subscription(subscriptionCode)

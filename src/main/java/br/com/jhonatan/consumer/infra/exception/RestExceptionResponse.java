@@ -1,7 +1,6 @@
 package br.com.jhonatan.consumer.infra.exception;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.Valid;
 import lombok.*;
 import org.springframework.http.HttpStatus;
 
@@ -12,7 +11,6 @@ import org.springframework.http.HttpStatus;
 @NoArgsConstructor
 public class RestExceptionResponse {
     @JsonProperty("status")
-    @Valid
     private String status;
 
     @JsonProperty("message")

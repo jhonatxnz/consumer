@@ -4,8 +4,8 @@ import org.springframework.web.client.RestClientException;
 
 public class PartnerIntegrationException extends RuntimeException {
 
-    public PartnerIntegrationException(String document, RestClientException message) {
-        super(document + message);
+    public PartnerIntegrationException(String message, RestClientException cause) {
+        super(message + ": " + cause.getMessage(), cause);
     }
 
     public PartnerIntegrationException(String message) {

@@ -53,11 +53,22 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     protected ResponseEntity<RestExceptionResponse> subscriptionAlreadyCanceled(SubscriptionAlreadyCanceled e) {
-        return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+        return  ResponseEntity.status(HttpStatus.CONFLICT).body(
                 new RestExceptionResponse(
                         "error",
                         e.getMessage(),
-                        HttpStatus.NOT_FOUND
+                        HttpStatus.CONFLICT
+                )
+        );
+    }
+
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerSubscriptionAlreadyCanceledException(PartnerSubscriptionAlreadyCanceledException e) {
+        return  ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.CONFLICT
                 )
         );
     }
@@ -97,33 +108,33 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     protected ResponseEntity<RestExceptionResponse> partnerIntegrationException(PartnerIntegrationException e) {
-        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+        return  ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(
                 new RestExceptionResponse(
                         "error",
                         e.getMessage(),
-                        HttpStatus.BAD_REQUEST
+                        HttpStatus.BAD_GATEWAY
                 )
         );
     }
 
     @ExceptionHandler
     protected ResponseEntity<RestExceptionResponse> partnerUserNotFoundException(PartnerUserNotFoundException e) {
-        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+        return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 new RestExceptionResponse(
                         "error",
                         e.getMessage(),
-                        HttpStatus.BAD_REQUEST
+                        HttpStatus.NOT_FOUND
                 )
         );
     }
 
     @ExceptionHandler
     protected ResponseEntity<RestExceptionResponse> partnerUserAlreadyHasSubscriptionException(PartnerUserAlreadyHasSubscriptionException e) {
-        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+        return  ResponseEntity.status(HttpStatus.CONFLICT).body(
                 new RestExceptionResponse(
                         "error",
                         e.getMessage(),
-                        HttpStatus.BAD_REQUEST
+                        HttpStatus.CONFLICT
                 )
         );
     }

@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
@@ -19,116 +20,89 @@ public class ProviderSubscriptionsClient {
     private final RestClient providerRestClient;
 
     public ProviderUserResponse findUser(String document) {
-        try {
-            return providerRestClient.get()
-                    .uri("api/customers/document/{document}", document)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new PartnerUserNotFoundException("User " + document +  " not found" );
-        } catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to find user " + document + " ", e);
-        }
+        return execute("find user " + document, () ->
+                providerRestClient.get()
+                        .uri("/api/customers/document/{document}", document)
+                        .retrieve()
+                        .body(ProviderUserResponse.class));
     }
 
     public void createUser(ProviderUserRequest request) {
         try {
-
-            ProviderUserRequest providerUserRequest = ProviderUserRequest.builder()
-                    .name(request.getName())
-                    .document(request.getDocument())
-                    .email(request.getEmail())
-                    .phone(request.getPhone())
-                    .build();
-
-            providerRestClient.post()
-                    .uri("api/customers")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(providerUserRequest)
-                    .retrieve()
-                    .toBodilessEntity();
-        }
-        catch (HttpClientErrorException.BadRequest e) {
-            throw new PartnerInvalidDataException("Invalid data for user creation: " + e.getMessage());
+            executeVoid("create user " + request.getDocument(), () ->
+                    providerRestClient.post()
+                            .uri("/api/customers")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(request)
+                            .retrieve()
+                            .toBodilessEntity());
         } catch (HttpClientErrorException.Conflict e) {
-            throw new PartnerUserAlreadyExistsException("User " + request.getDocument() +  " already has exists");
-        }  catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to create user " + request.getDocument(), e);
+            throw new PartnerUserAlreadyExistsException("User " + request.getDocument() + " already exists in the partner");
         }
     }
 
     public ProviderUserResponse updateUser(String document, ProviderUpdateUserRequest request) {
-        try {
-            ProviderUpdateUserRequest providerUpdateUserRequest = ProviderUpdateUserRequest.builder()
-                    .name(request.getName())
-                    .email(request.getEmail())
-                    .phone(request.getPhone())
-                    .build();
-
-            return providerRestClient.put()
-                    .uri("api/customers/{document}", document)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(providerUpdateUserRequest)
-                    .retrieve()
-                    .body(ProviderUserResponse.class);
-        }
-        catch (HttpClientErrorException.BadRequest e) {
-            throw new PartnerInvalidDataException("Invalid data for user update: " + e.getMessage());
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new PartnerUserNotFoundException("User not found in partner");
-        } catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to update user " + document + " ", e);
-        }
+        return execute("update user " + document, () ->
+                providerRestClient.put()
+                        .uri("/api/customers/{document}", document)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(request)
+                        .retrieve()
+                        .body(ProviderUserResponse.class));
     }
 
     public List<ProviderSubscriptionResponse> listSubscriptions(String document) {
-        try {
-            return providerRestClient.get()
-                    .uri("api/customers/{document}/subscriptions", document)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
-        }
-        catch (HttpClientErrorException.BadRequest e) {
-            throw new PartnerInvalidDataException("Invalid data for listing subscriptions: " + e.getMessage());
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new PartnerUserNotFoundException("User not found in partner");
-        } catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to list subscriptions for " + document, e);
-        }
+        return this.<List<ProviderSubscriptionResponse>>execute("list subscriptions for " + document, () ->
+                providerRestClient.get()
+                        .uri("/api/customers/{document}/subscriptions", document)
+                        .retrieve()
+                        .body(new ParameterizedTypeReference<List<ProviderSubscriptionResponse>>() {}));
     }
 
     public void createSubscription(String document, String code) {
         try {
-            providerRestClient.post()
-                    .uri("api/customers/{document}/subscriptions", document)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new ProviderSubscriptionRequest(code))
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (HttpClientErrorException.BadRequest e) {
-            throw new PartnerInvalidDataException("Invalid data for subscription creation: " + e.getMessage());
+            executeVoid("create subscription " + code + " for " + document, () ->
+                    providerRestClient.post()
+                            .uri("/api/customers/{document}/subscriptions", document)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(new ProviderSubscriptionRequest(code))
+                            .retrieve()
+                            .toBodilessEntity());
         } catch (HttpClientErrorException.Conflict e) {
-            throw new PartnerUserAlreadyHasSubscriptionException("User " + document +  "already has subscription " + code);
-        } catch (HttpClientErrorException.NotFound e) {
-            throw new PartnerUserNotFoundException("User not found in partner");
-        } catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to create subscription for " + document, e);
+            throw new PartnerUserAlreadyHasSubscriptionException("User " + document + " already has subscription " + code);
         }
     }
 
     public void cancelSubscription(String document, String code) {
         try {
-             providerRestClient.delete()
-                    .uri("api/customers/{document}/subscriptions/{subscription}", document, code)
-                    .retrieve()
-                    .toBodilessEntity();
+            executeVoid("cancel subscription " + code + " for " + document, () ->
+                    providerRestClient.delete()
+                            .uri("/api/customers/{document}/subscriptions/{subscription}", document, code)
+                            .retrieve()
+                            .toBodilessEntity());
+        } catch (HttpClientErrorException.Conflict e) {
+            throw new PartnerSubscriptionAlreadyCanceledException("Subscription " + code + " already canceled in the partner for user " + document);
         }
-        catch (HttpClientErrorException.BadRequest e) {
-            throw new PartnerInvalidDataException("Invalid data for delete subscription: " + e.getMessage());
+    }
+
+    private <T> T execute(String action, Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new PartnerInvalidDataException("Invalid data to " + action + ": " + e.getMessage());
         } catch (HttpClientErrorException.NotFound e) {
-            throw new PartnerUserNotFoundException(e.getMessage());
+            throw new PartnerUserNotFoundException("Not found in the partner while trying to " + action);
+        } catch (HttpClientErrorException.Conflict e) {
+            throw e;
         } catch (RestClientException e) {
-            throw new PartnerIntegrationException("Failed to delete subscription for " + document, e);
+            throw new PartnerIntegrationException("Failed to " + action, e);
         }
+    }
+
+    private void executeVoid(String action, Runnable call) {
+        execute(action, () -> {
+            call.run();
+            return null;
+        });
     }
 }
