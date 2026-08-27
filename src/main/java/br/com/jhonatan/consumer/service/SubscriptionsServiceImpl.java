@@ -300,7 +300,6 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     public void updateUserSubscriptionHistory(UserSubscriptions userSubscriptions, String partner, Actions action){
 
         UserSubscriptionsHistory userSubscriptionsHistory = UserSubscriptionsHistory.builder()
-                .id(userSubscriptions.getId())
                 .subscriptionId(userSubscriptions.getSubscriptionId())
                 .userId(userSubscriptions.getUserId())
                 .action(action.value())

@@ -1,4 +1,4 @@
-server:
+﻿server:
   # Different default port from provider (8080) so both APIs can run at the same time locally.
   port: ${SERVER_PORT:8081}
 
@@ -46,10 +46,17 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 # Base URL of the provider API this service consumes.
-# No HTTP client wired up yet on purpose (kept out of the skeleton) - add a
-# WebClient/RestClient bean in config/ pointing at this URL when you implement it.
 provider:
   api:
     base-url: ${PROVIDER_API_BASE_URL:http://localhost:8080}
     connect-timeout: 3000
     read-timeout: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health,metrics,prometheus
+
+info:
+  app: Consumer API
