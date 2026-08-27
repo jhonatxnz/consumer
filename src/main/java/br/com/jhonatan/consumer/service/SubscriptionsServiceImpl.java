@@ -94,7 +94,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
             return StatusResponse.builder()
                     .subscription(subscriptionCode)
                     .partner(subscription.getPartner())
-                    .message("Subscription successfully reactivated ")
+                    .message("Subscription successfully reactivated")
                     .build();
         }
         else {
