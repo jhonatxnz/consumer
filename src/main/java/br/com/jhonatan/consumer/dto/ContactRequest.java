@@ -6,11 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Body used by the activate, reactivate and update-contact endpoints.
- * username/subscription come from the path already, so the body only carries
- * the contact fields the original spec listed alongside them (email, phone).
- */
 @Getter
 @Setter
 @NoArgsConstructor
