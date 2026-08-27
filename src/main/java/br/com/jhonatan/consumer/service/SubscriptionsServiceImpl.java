@@ -263,6 +263,16 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
         userSubscriptionsRepository.save(userSubscription);
 
+        List<UserSubscriptions> customerSubscriptions = userSubscriptionsRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE.value());
+
+        for (UserSubscriptions activeSubscription  : customerSubscriptions){
+            activeSubscription.setEmail(request.getEmail());
+            activeSubscription.setPhone(request.getPhone());
+            activeSubscription.setUpdatedAt(java.time.LocalDateTime.now());
+
+            userSubscriptionsRepository.save(activeSubscription);
+        }
+
         return StatusResponse.builder()
                 .subscription(subscriptionCode)
                 .partner(subscription.getPartner())

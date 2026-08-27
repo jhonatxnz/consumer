@@ -1,11 +1,6 @@
 package br.com.jhonatan.consumer.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +17,13 @@ import java.time.LocalDateTime;
 @Builder
 @ToString
 @Entity
-@Table(name = "users_subscriptions")
+@Table(
+        name = "users_subscriptions",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_user_subscription",
+                columnNames = {"user_id", "subscription_id"}
+        )
+)
 public class UserSubscriptions {
 
     @Id
