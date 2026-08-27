@@ -6,12 +6,15 @@ import br.com.jhonatan.consumer.client.dto.ProviderUserRequest;
 import br.com.jhonatan.consumer.dto.StatusResponse;
 import br.com.jhonatan.consumer.dto.ContactRequest;
 import br.com.jhonatan.consumer.dto.SubscriptionDetails;
+import br.com.jhonatan.consumer.enums.Actions;
 import br.com.jhonatan.consumer.enums.SubscriptionStatus;
 import br.com.jhonatan.consumer.exception.*;
 import br.com.jhonatan.consumer.model.Subscriptions;
 import br.com.jhonatan.consumer.model.UserSubscriptions;
+import br.com.jhonatan.consumer.model.UserSubscriptionsHistory;
 import br.com.jhonatan.consumer.model.Users;
 import br.com.jhonatan.consumer.repository.SubscriptionsRepository;
+import br.com.jhonatan.consumer.repository.UserSubscriptionsHistoryRepository;
 import br.com.jhonatan.consumer.repository.UserSubscriptionsRepository;
 import br.com.jhonatan.consumer.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     private final UsersRepository usersRepository;
     private final SubscriptionsRepository subscriptionsRepository;
     private final UserSubscriptionsRepository userSubscriptionsRepository;
+    private final UserSubscriptionsHistoryRepository userSubscriptionsHistoryRepository;
 
     private final ProviderSubscriptionsClient providerSubscriptionsClient;
 
@@ -89,6 +93,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
             userSubscriptionsRepository.save(subscriptionToReactivate);
 
+            updateUserSubscriptionHistory(subscriptionToReactivate, subscription.getPartner(), Actions.REACTIVATE);
+
             log.info("{} subscription successfully reactivated for user {}", subscriptionCode, document);
 
             return StatusResponse.builder()
@@ -110,7 +116,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
             providerSubscriptionsClient.createUser(providerUserRequest);
             //rescue outliers -> outlierException from provider
 
-            UserSubscriptions userSubscriptionsActive = UserSubscriptions.builder()
+            UserSubscriptions subscriptionsToActive = UserSubscriptions.builder()
                     .subscriptionId(subscription.getId())
                     .userId(user.getId())
                     .createdAt(LocalDateTime.now())
@@ -122,7 +128,9 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
             providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
 
-            userSubscriptionsRepository.save(userSubscriptionsActive);
+            userSubscriptionsRepository.save(subscriptionsToActive);
+
+            updateUserSubscriptionHistory(subscriptionsToActive, subscription.getPartner(), Actions.ACTIVATE);
 
             log.info("{} subscription successfully activated for user {}", subscriptionCode, document);
 
@@ -161,6 +169,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
         userSubscriptionsRepository.save(subscriptionToCancel);
 
+        updateUserSubscriptionHistory(subscriptionToCancel, subscription.getPartner(), Actions.INACTIVATE);
+
         log.info("Subscription successfully canceled for the customer {}", document);
 
         return StatusResponse.builder()
@@ -194,6 +204,9 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
 
         userSubscriptionsRepository.save(subscriptionToBlock);
 
+        updateUserSubscriptionHistory(subscriptionToBlock, subscription.getPartner(), Actions.BLOCKED);
+
+
         log.info("Subscription successfully blocked for the customer {}", document);
 
         return StatusResponse.builder()
@@ -226,6 +239,9 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         subscriptionToUnblock.setUpdatedAt(LocalDateTime.now());
 
         userSubscriptionsRepository.save(subscriptionToUnblock);
+
+        updateUserSubscriptionHistory(subscriptionToUnblock, subscription.getPartner(), Actions.UNBLOCKED);
+
 
         log.info("Subscription successfully unblocked for the customer {}", document);
 
@@ -279,5 +295,19 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                 .message("User contact successfully updated")
                 .build();
 
+    }
+
+    public void updateUserSubscriptionHistory(UserSubscriptions userSubscriptions, String partner, Actions action){
+
+        UserSubscriptionsHistory userSubscriptionsHistory = UserSubscriptionsHistory.builder()
+                .id(userSubscriptions.getId())
+                .subscriptionId(userSubscriptions.getSubscriptionId())
+                .userId(userSubscriptions.getUserId())
+                .action(action.value())
+                .date(LocalDateTime.now())
+                .partner(partner)
+                .build();
+
+        userSubscriptionsHistoryRepository.save(userSubscriptionsHistory);
     }
 }
