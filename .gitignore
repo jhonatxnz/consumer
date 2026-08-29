@@ -31,3 +31,10 @@ out/
 
 ### macOS / OS junk ###
 .DS_Store
+
+### Application logs (shipped to OpenSearch/Elasticsearch via Fluent Bit, not versioned) ###
+logs/
+*.log
+
+### Environment-specific secrets (never commit real credentials) ###
+.env

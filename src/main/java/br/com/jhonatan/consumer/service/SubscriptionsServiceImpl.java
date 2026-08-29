@@ -40,6 +40,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     @Override
     public List<SubscriptionDetails> list(String document) {
 
+        log.info("Listing user subscriptions - Consumer API");
+
         Users user = usersRepository.findByDocument(document).orElseThrow(UserNotFoundException::new);
 
         List<UserSubscriptions> userSubscriptions = userSubscriptionsRepository.findByUserId(user.getId());
