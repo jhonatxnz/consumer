@@ -1,6 +1,8 @@
 package br.com.jhonatan.consumer.service;
 
 import br.com.jhonatan.consumer.client.ProviderSubscriptionsClient;
+import br.com.jhonatan.consumer.client.TokenPartner;
+import br.com.jhonatan.consumer.client.dto.ProviderTokenResponse;
 import br.com.jhonatan.consumer.client.dto.ProviderUpdateUserRequest;
 import br.com.jhonatan.consumer.client.dto.ProviderUserRequest;
 import br.com.jhonatan.consumer.dto.StatusResponse;
@@ -36,6 +38,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     private final UserSubscriptionsHistoryRepository userSubscriptionsHistoryRepository;
 
     private final ProviderSubscriptionsClient providerSubscriptionsClient;
+    private final TokenPartner tokenPartner;
 
     @Override
     public List<SubscriptionDetails> list(String document) {
@@ -90,7 +93,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
             subscriptionToReactivate.setEmail(request.getEmail());
             subscriptionToReactivate.setPhone(request.getPhone());
 
-            providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
+            ProviderTokenResponse token = tokenPartner.generateToken();
+            providerSubscriptionsClient.createSubscription(token.getAccessToken(), user.getDocument(), subscription.getCode());
             //rescue outliers -> outlierException from provider
 
             userSubscriptionsRepository.save(subscriptionToReactivate);
@@ -115,7 +119,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                     .phone(request.getPhone())
                     .build();
 
-            providerSubscriptionsClient.createUser(providerUserRequest);
+            ProviderTokenResponse token = tokenPartner.generateToken();
+            providerSubscriptionsClient.createUser(token.getAccessToken(), providerUserRequest);
             //rescue outliers -> outlierException from provider
 
             UserSubscriptions subscriptionsToActive = UserSubscriptions.builder()
@@ -128,7 +133,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                     .phone(request.getPhone())
                     .build();
 
-            providerSubscriptionsClient.createSubscription(user.getDocument(), subscription.getCode());
+            providerSubscriptionsClient.createSubscription(token.getAccessToken(), user.getDocument(), subscription.getCode());
 
             userSubscriptionsRepository.save(subscriptionsToActive);
 
@@ -167,7 +172,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
         subscriptionToCancel.setCanceledAt(LocalDateTime.now());
         subscriptionToCancel.setUpdatedAt(LocalDateTime.now());
 
-        providerSubscriptionsClient.cancelSubscription(document, subscriptionCode);
+        ProviderTokenResponse token = tokenPartner.generateToken();
+        providerSubscriptionsClient.cancelSubscription(token.getAccessToken(), document, subscriptionCode);
 
         userSubscriptionsRepository.save(subscriptionToCancel);
 
@@ -274,7 +280,8 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
                 .phone(request.getPhone())
                 .build();
 
-        providerSubscriptionsClient.updateUser(document, providerUpdateUserRequest);
+        ProviderTokenResponse token = tokenPartner.generateToken();
+        providerSubscriptionsClient.updateUser(token.getAccessToken(), document, providerUpdateUserRequest);
 
         userSubscription.setEmail(request.getEmail());
         userSubscription.setPhone(request.getPhone());

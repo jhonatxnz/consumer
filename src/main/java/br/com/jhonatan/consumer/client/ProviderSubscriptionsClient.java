@@ -4,6 +4,7 @@ import br.com.jhonatan.consumer.client.dto.*;
 import br.com.jhonatan.consumer.client.exceptions.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -19,7 +20,7 @@ public class ProviderSubscriptionsClient {
 
     private final RestClient providerRestClient;
 
-    public ProviderUserResponse findUser(String document) {
+    public ProviderUserResponse findUser(String token, String document) {
         return execute("find user " + document, () ->
                 providerRestClient.get()
                         .uri("/api/customers/document/{document}", document)
@@ -27,12 +28,13 @@ public class ProviderSubscriptionsClient {
                         .body(ProviderUserResponse.class));
     }
 
-    public void createUser(ProviderUserRequest request) {
+    public void createUser(String token, ProviderUserRequest request) {
         try {
             executeVoid("create user " + request.getDocument(), () ->
                     providerRestClient.post()
                             .uri("/api/customers")
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                             .body(request)
                             .retrieve()
                             .toBodilessEntity());
@@ -41,17 +43,18 @@ public class ProviderSubscriptionsClient {
         }
     }
 
-    public ProviderUserResponse updateUser(String document, ProviderUpdateUserRequest request) {
+    public ProviderUserResponse updateUser(String token, String document, ProviderUpdateUserRequest request) {
         return execute("update user " + document, () ->
                 providerRestClient.put()
                         .uri("/api/customers/{document}", document)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .body(request)
                         .retrieve()
                         .body(ProviderUserResponse.class));
     }
 
-    public List<ProviderSubscriptionResponse> listSubscriptions(String document) {
+    public List<ProviderSubscriptionResponse> listSubscriptions(String token, String document) {
         return this.<List<ProviderSubscriptionResponse>>execute("list subscriptions for " + document, () ->
                 providerRestClient.get()
                         .uri("/api/customers/{document}/subscriptions", document)
@@ -59,12 +62,13 @@ public class ProviderSubscriptionsClient {
                         .body(new ParameterizedTypeReference<List<ProviderSubscriptionResponse>>() {}));
     }
 
-    public void createSubscription(String document, String code) {
+    public void createSubscription(String token, String document, String code) {
         try {
             executeVoid("create subscription " + code + " for " + document, () ->
                     providerRestClient.post()
                             .uri("/api/customers/{document}/subscriptions", document)
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                             .body(new ProviderSubscriptionRequest(code))
                             .retrieve()
                             .toBodilessEntity());
@@ -73,11 +77,12 @@ public class ProviderSubscriptionsClient {
         }
     }
 
-    public void cancelSubscription(String document, String code) {
+    public void cancelSubscription(String token, String document, String code) {
         try {
             executeVoid("cancel subscription " + code + " for " + document, () ->
                     providerRestClient.delete()
                             .uri("/api/customers/{document}/subscriptions/{subscription}", document, code)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                             .retrieve()
                             .toBodilessEntity());
         } catch (HttpClientErrorException.Conflict e) {
@@ -90,6 +95,8 @@ public class ProviderSubscriptionsClient {
             return call.get();
         } catch (HttpClientErrorException.BadRequest e) {
             throw new PartnerInvalidDataException("Invalid data to " + action + ": " + e.getMessage());
+        } catch (HttpClientErrorException.Unauthorized e) {
+            throw new PartnerUnauthorizedException("Unauthorized in the partner while trying to " + action);
         } catch (HttpClientErrorException.NotFound e) {
             throw new PartnerUserNotFoundException("Not found in the partner while trying to " + action);
         } catch (HttpClientErrorException.Conflict e) {
