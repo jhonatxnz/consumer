@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 
 @Component
 @RequiredArgsConstructor
-public class TokenPartner {
+public class ProviderTokenClient {
     private final RestClient providerRestClient;
 
     @Value("${provider.api.client-id}") String clientId;

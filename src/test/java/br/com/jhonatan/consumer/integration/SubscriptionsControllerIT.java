@@ -2,6 +2,8 @@ package br.com.jhonatan.consumer.integration;
 
 import br.com.jhonatan.consumer.ConsumerApplication;
 import br.com.jhonatan.consumer.client.ProviderSubscriptionsClient;
+import br.com.jhonatan.consumer.client.ProviderTokenClient;
+import br.com.jhonatan.consumer.client.dto.ProviderTokenResponse;
 import br.com.jhonatan.consumer.controller.RestControllerUrlBase;
 import br.com.jhonatan.consumer.dto.ContactRequest;
 import br.com.jhonatan.consumer.dto.StatusResponse;
@@ -18,6 +20,7 @@ import br.com.jhonatan.consumer.util.UserCreator;
 import br.com.jhonatan.consumer.util.UserSubscriptionCreator;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.BDDMockito;
@@ -39,6 +42,7 @@ import java.util.List;
 @AutoConfigureTestDatabase
 public class SubscriptionsControllerIT {
 
+    private static final String FAKE_PROVIDER_TOKEN = "test-provider-access-token";
 
     @Autowired
     private TestRestTemplate testRestTemplate;
@@ -57,6 +61,19 @@ public class SubscriptionsControllerIT {
 
     @MockitoBean
     private ProviderSubscriptionsClient providerSubscriptionsClient;
+
+    @MockitoBean
+    private ProviderTokenClient tokenPartner;
+
+    @BeforeEach
+    void mockProviderToken() {
+        BDDMockito.given(tokenPartner.generateToken())
+                .willReturn(ProviderTokenResponse.builder()
+                        .accessToken(FAKE_PROVIDER_TOKEN)
+                        .tokenType("Bearer")
+                        .expiresIn(3600L)
+                        .build());
+    }
 
     @AfterEach
     void tearDown() {
@@ -120,9 +137,9 @@ public class SubscriptionsControllerIT {
         Assertions.assertThat(response.getMessage()).isEqualTo("Subscription successfully activated");
 
         BDDMockito.then(providerSubscriptionsClient).should()
-                .createUser(BDDMockito.any());
+                .createUser(BDDMockito.eq(FAKE_PROVIDER_TOKEN), BDDMockito.any());
         BDDMockito.then(providerSubscriptionsClient).should()
-                .createSubscription(savedUser.getDocument(), savedSubscription.getCode());
+                .createSubscription(FAKE_PROVIDER_TOKEN, savedUser.getDocument(), savedSubscription.getCode());
     }
 
     @Test
@@ -159,9 +176,9 @@ public class SubscriptionsControllerIT {
         Assertions.assertThat(response.getMessage()).isEqualTo("Subscription successfully reactivated");
 
         BDDMockito.then(providerSubscriptionsClient).should()
-                .createSubscription(savedUser.getDocument(), savedSubscription.getCode());
+                .createSubscription(FAKE_PROVIDER_TOKEN, savedUser.getDocument(), savedSubscription.getCode());
         BDDMockito.then(providerSubscriptionsClient).should(BDDMockito.never())
-                .createUser(BDDMockito.any());
+                .createUser(BDDMockito.any(), BDDMockito.any());
     }
 
     @Test
@@ -189,7 +206,7 @@ public class SubscriptionsControllerIT {
         Assertions.assertThat(response.getMessage()).isEqualTo("Subscription successfully canceled");
 
         BDDMockito.then(providerSubscriptionsClient).should()
-                .cancelSubscription(savedUser.getDocument(), savedSubscription.getCode());
+                .cancelSubscription(FAKE_PROVIDER_TOKEN, savedUser.getDocument(), savedSubscription.getCode());
     }
 
     @Test
@@ -278,6 +295,6 @@ public class SubscriptionsControllerIT {
         Assertions.assertThat(response.getMessage()).isEqualTo("User contact successfully updated");
 
         BDDMockito.then(providerSubscriptionsClient).should()
-                .updateUser(BDDMockito.eq(savedUser.getDocument()), BDDMockito.any());
+                .updateUser(BDDMockito.eq(FAKE_PROVIDER_TOKEN), BDDMockito.eq(savedUser.getDocument()), BDDMockito.any());
     }
 }

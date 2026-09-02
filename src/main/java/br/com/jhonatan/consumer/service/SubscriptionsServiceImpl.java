@@ -1,7 +1,7 @@
 package br.com.jhonatan.consumer.service;
 
 import br.com.jhonatan.consumer.client.ProviderSubscriptionsClient;
-import br.com.jhonatan.consumer.client.TokenPartner;
+import br.com.jhonatan.consumer.client.ProviderTokenClient;
 import br.com.jhonatan.consumer.client.dto.ProviderTokenResponse;
 import br.com.jhonatan.consumer.client.dto.ProviderUpdateUserRequest;
 import br.com.jhonatan.consumer.client.dto.ProviderUserRequest;
@@ -38,7 +38,7 @@ public class SubscriptionsServiceImpl implements SubscriptionsService {
     private final UserSubscriptionsHistoryRepository userSubscriptionsHistoryRepository;
 
     private final ProviderSubscriptionsClient providerSubscriptionsClient;
-    private final TokenPartner tokenPartner;
+    private final ProviderTokenClient tokenPartner;
 
     @Override
     public List<SubscriptionDetails> list(String document) {

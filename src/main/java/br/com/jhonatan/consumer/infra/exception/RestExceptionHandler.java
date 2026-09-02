@@ -105,6 +105,16 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
                 )
         );
     }
+    @ExceptionHandler
+    protected ResponseEntity<RestExceptionResponse> partnerUnauthorizedException(PartnerUnauthorizedException e) {
+        return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                new RestExceptionResponse(
+                        "error",
+                        e.getMessage(),
+                        HttpStatus.UNAUTHORIZED
+                )
+        );
+    }
 
     @ExceptionHandler
     protected ResponseEntity<RestExceptionResponse> partnerIntegrationException(PartnerIntegrationException e) {

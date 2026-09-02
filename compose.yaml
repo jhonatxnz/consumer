@@ -5,26 +5,19 @@ services:
     environment:
       - 'MYSQL_DATABASE=consumer_db'
       - 'MYSQL_USER=consumer_user'
-      - 'MYSQL_PASSWORD=consumer_pass'
-      - 'MYSQL_ROOT_PASSWORD=root'
+      - 'MYSQL_PASSWORD=${MYSQL_PASSWORD}' #should be in an .env file
+      - 'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}' #should be in an .env file
     ports:
       # Different host port from provider's compose.yaml (3306) so both stacks
       # can run at the same time locally.
       - '3307:3306'
-    # Without this, Spring Boot's Docker Compose Support may see the port open
-    # (MySQL's entrypoint restarts the server after running init scripts) and try
-    # to connect before the consumer_user/consumer_db are actually ready, causing
-    # an intermittent "Access denied" on startup. This makes it wait for a real ping.
+
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # Note: Spring Boot's Docker Compose Support doesn't create the Kafka connection
-  # automatically today (no native "service connection"), unlike MySQL.
-  # The bootstrap-servers in application.yml (localhost:9093) already matches the
-  # port exposed here, so no extra configuration is needed.
   kafka:
     image: 'apache/kafka:latest'
     ports:
@@ -61,7 +54,7 @@ services:
       - '3001:3000'
     environment:
       - 'GF_SECURITY_ADMIN_USER=admin'
-      - 'GF_SECURITY_ADMIN_PASSWORD=admin'
+      - 'GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}' #should be in an .env file
     volumes:
       - 'grafana-data:/var/lib/grafana'
     depends_on:
